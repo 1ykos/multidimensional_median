@@ -176,13 +176,14 @@ matrix<double,2,1> geometric_median(
     matrix<double,2,1> d1 = zeros_matrix<double>(2,1);
     matrix<double,2,2> d2 = zeros_matrix<double>(2,2);
     double sum = 0;
+    double w = 0;
     for (auto it=points.begin();it!=points.end();++it) {
       const matrix<double,2,1> y = get<1>(*it);
       const double l2 = length_squared(x-y);
       const double l  = sqrt(l2);
       sum += get<0>(*it)*l;
       if (l2==0) {
-        // w = get<0>(*it);
+        w = get<0>(*it);
         continue;
       }
       d1  += get<0>(*it)*(x-y)/l;
@@ -197,6 +198,8 @@ matrix<double,2,1> geometric_median(
     //cout << trans(d1);
     //cout << trans(inv(d2)*d1);
     //cout << length(d1) << endl;
+    if (length(d1)<w) break;
+    d1-=w*d1/length(d1);
     if (length(d1)<1e-8) break;
     matrix<double,2,1> t = x-inv(d2)*d1;
     while (true) {
