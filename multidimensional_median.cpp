@@ -112,6 +112,9 @@ tuple<double,matrix<double,2,1>> fast_centerpoint(
   if (points.size()==0) {
     return {0.0,zeros_matrix<double>(2,1)};
   }
+  if (points.size()==1) {
+    return *points.begin();
+  }
   vector<
     tuple<
       double,
@@ -169,57 +172,60 @@ matrix<double,2,1> geometric_median(
     const vector<tuple<double,matrix<double,2,1>>>& points
     ) {
   if (points.size()==0) {
-    return {0.0,zeros_matrix<double>(2,1)};
+    return zeros_matrix<double>(2,1);
+  }
+  if (points.size()==1) {
+    return get<1>(*points.begin());
   }
   matrix<double,2,1> x = get<1>(fast_centerpoint(points));
-  for (size_t i=0;i!=16;++i) {
+  for (size_t i=0;i!=1024;++i) {
     matrix<double,2,1> d1 = zeros_matrix<double>(2,1);
     matrix<double,2,2> d2 = zeros_matrix<double>(2,2);
     double sum = 0;
     double w = 0;
+    double sumw = 0;
     for (auto it=points.begin();it!=points.end();++it) {
       const matrix<double,2,1> y = get<1>(*it);
       const double l2 = length_squared(x-y);
       const double l  = sqrt(l2);
       sum += get<0>(*it)*l;
-      if (l2==0) {
-        w = get<0>(*it);
+      sumw+= get<0>(*it);
+      if (l<1e-16) {
+        w+= get<0>(*it);
         continue;
       }
       d1  += get<0>(*it)*(x-y)/l;
       d2  += get<0>(*it)*(identity_matrix<double>(2)-(x-y)*trans(x-y)/l2)/l;
     }
-    //cout << endl;
-    //cout << trans(d1);
-    //cout << d2;
-    //d1(0)-=w;
-    //d1(1)-=w;
-    //cout << trans(x);
-    //cout << trans(d1);
-    //cout << trans(inv(d2)*d1);
-    //cout << length(d1) << endl;
     if (length(d1)<w) break;
-    d1-=w*d1/length(d1);
-    if (length(d1)<1e-8) break;
-    matrix<double,2,1> t = x-inv(d2)*d1;
+    matrix<double,2,1> s = inv(d2)*d1;
+    if (length(s)<1e-16) break;
+    s = inv(d2)*(d1-w*s/length(s));
+    if (length(s)<1e-16) break;
+    matrix<double,2,1> t = x-s;
+    //cout << length(t-x) << endl;
+    cout << trans(t-x);
+    bool breakthrough = false;
     while (true) {
       double sum2 = 0;
       for (auto it=points.begin();it!=points.end();++it) {
         const matrix<double,2,1> y = get<1>(*it);
         sum2 += get<0>(*it)*length(t-y);
       }
-      if (sum2<=sum) {
+      if (sum2<sum) {
         x = t;
         break;
       } else {
-        t = 0.5*(x+t);
+        t = x-(d1-d1*w/sumw)/sumw;
+        d1*=exp(-1);
+        cout << trans(x-t);
       }
-      if (length(x-t)<1e-8) {
-        x = t;
+      if (length(x-t)<1e-16) {
+        breakthrough = true;
         break;
       }
     }
-    //cout << trans(x) << endl;
+    if (breakthrough) break;
   }
   return x;
 }
@@ -238,9 +244,4 @@ int main(int argc,char** argv) {
   }
   auto median = geometric_median(points);
   cout << trans(median);
-  /*
-  for (auto it=data.begin();it!=pivot_end;++it) {
-    cout << get<0>(*it) << " " << trans(get<1>(*it));
-  }
-  */
 }
