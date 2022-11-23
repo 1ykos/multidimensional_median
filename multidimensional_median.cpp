@@ -178,6 +178,7 @@ matrix<double,2,1> geometric_median(
     return get<1>(*points.begin());
   }
   matrix<double,2,1> x = get<1>(fast_centerpoint(points));
+  // cout << trans(x) ;
   for (size_t i=0;i!=1024;++i) {
     matrix<double,2,1> d1 = zeros_matrix<double>(2,1);
     matrix<double,2,2> d2 = zeros_matrix<double>(2,2);
@@ -198,13 +199,13 @@ matrix<double,2,1> geometric_median(
       d2  += get<0>(*it)*(identity_matrix<double>(2)-(x-y)*trans(x-y)/l2)/l;
     }
     if (length(d1)<w) break;
-    matrix<double,2,1> s = inv(d2)*d1;
+    matrix<double,2,1> s = inv(d2)*(d1-w*d1/length(d1));
     if (length(s)<1e-16) break;
-    s = inv(d2)*(d1-w*s/length(s));
-    if (length(s)<1e-16) break;
+    //s = inv(d2)*(d1-w*s/length(s));
+    //if (length(s)<1e-16) break;
     matrix<double,2,1> t = x-s;
     //cout << length(t-x) << endl;
-    cout << trans(t-x);
+    //cout << trans(t-x);
     bool breakthrough = false;
     while (true) {
       double sum2 = 0;
@@ -218,7 +219,7 @@ matrix<double,2,1> geometric_median(
       } else {
         t = x-(d1-d1*w/sumw)/sumw;
         d1*=exp(-1);
-        cout << trans(x-t);
+        //cout << trans(x-t);
       }
       if (length(x-t)<1e-16) {
         breakthrough = true;
